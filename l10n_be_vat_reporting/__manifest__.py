@@ -43,5 +43,5 @@
         "static/src/xml/vat_export.xml",
     ],
     'demo': [],
-    'installable': True
+    'installable': False
 }

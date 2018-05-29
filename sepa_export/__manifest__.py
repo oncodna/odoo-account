@@ -13,6 +13,6 @@
         'views/payment.xml',
         'wizard/views/export_sepa.xml',
     ],
-    'installable': True,  # not functional yet
+    'installable': False,  # not functional yet
     'auto_install': False,
 }

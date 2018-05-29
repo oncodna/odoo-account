@@ -1,6 +1,7 @@
 # -*- encoding: utf-8 -*-
 ##############################################################################
 #
+#    OncoDNA (www.oncodna.com)
 #    UNamur - University of Namur, Belgium (www.unamur.be)
 #    Noviat nv/sa (www.noviat.be)
 #
@@ -21,7 +22,7 @@
 import time
 import re
 
-from odoo import models, _
+from odoo import models, fields, _
 from odoo.exceptions import ValidationError
 from odoo import tools
 from odoo.addons.base.res.res_bank import sanitize_account_number
@@ -75,10 +76,10 @@ class CodaImport:
             elif line[1] == '1':  # foreign bank account BBAN structure
                 raise ValidationError(_('Error R1001: Foreign bank accounts with BBAN '
                                         'structure are not supported'))
-            elif line[1] == '2':    # Belgian bank account IBAN structure
+            elif line[1] == '2':  # Belgian bank account IBAN structure
                 statement['acc_number'] = sanitize_account_number(line[5:21])
                 statement['currency'] = rmspaces(line[39:42])
-            elif line[1] == '3':    # foreign bank account IBAN structure
+            elif line[1] == '3':  # foreign bank account IBAN structure
                 raise ValidationError(_('Error R1002: Foreign bank accounts with IBAN structure '
                                         'are not supported'))
             else:  # Something else, not supported
@@ -134,9 +135,9 @@ class CodaImport:
             st_line['communication_struct'] = False
             st_line['communication'] = rmspaces(line[62:115])
 
-        if not(st_line['communication']) and prev_line:
+        if not (st_line['communication']) and prev_line:
             st_line['communication'] = prev_line['communication']
-            if st_line['communication_struct'] and not(st_line.get('communication_type')):
+            if st_line['communication_struct'] and not (st_line.get('communication_type')):
                 st_line['communication_type'] = prev_line['communication_type']
 
         st_line['entryDate'] = time.strftime(
@@ -222,7 +223,7 @@ class CodaImport:
         statement['balance_end_real'] = float(rmspaces(line[42:57])) / 1000
         statement['date'] = time.strftime(tools.DEFAULT_SERVER_DATE_FORMAT,
                                           time.strptime(rmspaces(line[57:63]), '%d%m%y'))
-        if statement['debit'] == '1':    # 1=Debit
+        if statement['debit'] == '1':  # 1=Debit
             statement['balance_end_real'] = - statement['balance_end_real']
 
     def _parse_line_9(self, line, statement):
@@ -230,7 +231,7 @@ class CodaImport:
         statement['balancePlus'] = float(rmspaces(line[37:52])) / 1000
         if not statement.get('balance_end_real'):
             statement['balance_end_real'] = statement['balance_start'] + \
-                statement['balancePlus'] - statement['balanceMin']
+                                            statement['balancePlus'] - statement['balanceMin']
 
     def _get_transactions(self, coda_statement):
         transactions = []
@@ -281,12 +282,12 @@ class CodaImport:
         for line in recordlist:
             self._parse_line(line, coda_statements)
         for coda_st in coda_statements:
-            if coda_st.get('currency') and not(currency_code):
+            if coda_st.get('currency') and not (currency_code):
                 currency_code = coda_st['currency']
-            if coda_st.get('acc_number') and not(account_number):
+            if coda_st.get('acc_number') and not (account_number):
                 account_number = coda_st['acc_number']
             coda_st['coda_note'] = ''
-            if not(coda_st.get('date')):
+            if not (coda_st.get('date')):
                 raise ValidationError(_(' No transactions or no period in coda file !'))
             statements.append({
                 'name': coda_st['paperSeqNumber'],
@@ -336,3 +337,14 @@ class AccountBankStatementImport(models.TransientModel):
         if self._is_coda(data_file):
             return CodaImport().coda_parsing(data_file)
         return super(AccountBankStatementImport, self)._parse_file(data_file)
+
+    def _check_journal_bank_account(self, journal, account_number):
+        if journal.bank_account_id.acc_type == 'iban' and journal.bank_account_id.get_bban() == account_number:
+            return True
+        return super(AccountBankStatementImport, self)._check_journal_bank_account(journal, account_number)
+
+
+class AccountBankStatement(models.Model):
+    _inherit = 'account.bank.statement'
+
+    coda_note = fields.Text('CODA Notes')
