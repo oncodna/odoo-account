@@ -36,6 +36,25 @@ def rmspaces(s):
     return " ".join(s.split())
 
 
+def _unicode(data):
+    if isinstance(data, str):
+        encodings = ['cp1252', 'latin-1']
+        for encoding in encodings:
+            try:
+                data = unicode(data, encoding, 'strict')
+                break
+            except UnicodeDecodeError:
+                pass
+    return data
+
+
+def join_comm(dic, new_comm, comm_key="communication"):
+    if dic.get(comm_key):
+        dic[comm_key] = "%s %s" % (dic[comm_key], new_comm)
+    else:
+        dic[comm_key] = new_comm
+
+
 class CodaImport:
 
     def _parse_line(self, line, statements):
@@ -159,7 +178,7 @@ class CodaImport:
         if statement['lines'][-1]['ref'][0:4] != line[2:6]:
             raise ValidationError(_('CODA parsing error on movement data record 2.2, seq nr %s! '
                                     'Please report this issue via your Odoo support channel.') % line[2:10])
-        statement['lines'][-1]['communication'] += rmspaces(line[10:63])
+        join_comm(statement['lines'][-1], rmspaces(line[10:63]))
         statement['lines'][-1]['payment_reference'] = rmspaces(line[63:98])
         statement['lines'][-1]['counterparty_bic'] = rmspaces(line[98:109])
 
@@ -180,7 +199,7 @@ class CodaImport:
                 statement['lines'][-1]['counterpartyNumber'] = sanitize_account_number(line[10:44])
                 statement['lines'][-1]['counterpartyCurrency'] = rmspaces(line[44:47])
             statement['lines'][-1]['counterpartyName'] = rmspaces(line[47:82])
-            statement['lines'][-1]['communication'] += rmspaces(line[82:125])
+            join_comm(statement['lines'][-1], rmspaces(line[82:125]))
 
     def _parse_line_3(self, line, statement):
         if line[1] == '1':
@@ -200,13 +219,13 @@ class CodaImport:
             if infoLine['ref'] != rmspaces(line[2:10]):
                 raise ValidationError(_('CODA parsing error on information data record 3.2, seq nr %s! '
                                         'Please report this issue via your Odoo support channel.') % line[2:10])
-            statement['lines'][-1]['communication'] += rmspaces(line[10:100])
+            join_comm(statement['lines'][-1], rmspaces(line[10:100]))
         elif line[1] == '3':
             infoLine = statement['lines'][-1]
             if infoLine['ref'] != rmspaces(line[2:10]):
                 raise ValidationError(_('CODA parsing error on information data record 3.3, seq nr %s! '
                                         'Please report this issue via your Odoo support channel.') % line[2:10])
-            statement['lines'][-1]['communication'] += rmspaces(line[10:100])
+            join_comm(statement['lines'][-1], rmspaces(line[10:100]))
 
     def _parse_line_4(self, line, statement):
         comm_line = {}
@@ -275,7 +294,7 @@ class CodaImport:
         return transactions
 
     def coda_parsing(self, coda_file):
-        recordlist = coda_file.split('\n')
+        recordlist = _unicode(coda_file).split('\n')
         coda_statements = []
         statements = []
         self.global_comm = {}
@@ -291,12 +310,14 @@ class CodaImport:
             coda_st['coda_note'] = ''
             if not (coda_st.get('date')):
                 raise ValidationError(_(' No transactions or no period in coda file !'))
+            transactions = self._get_transactions(coda_st)
             statements.append({
                 'name': coda_st['paperSeqNumber'],
                 'date': coda_st['date'],
+                'coda_note': coda_st.get('coda_note'),
                 'balance_start': coda_st['balance_start'],
                 'balance_end_real': coda_st['balance_end_real'],
-                'transactions': self._get_transactions(coda_st),
+                'transactions': transactions,
             })
         return (currency_code, account_number, statements)
 
