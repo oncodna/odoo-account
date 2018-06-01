@@ -4,6 +4,7 @@
 #    OpenERP, Open Source Management Solution
 #
 #    Copyright (c) 2011 Noviat nv/sa (www.noviat.be). All rights reserved.
+#    Copyright (c) 2018 OncoDNA sa (www.oncodna.com). All rights reserved.
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as
@@ -22,7 +23,7 @@
 {
     'name': 'Belgium - Import Bank CODA Statements',
     'version': '2.1',
-    'author': 'University of Namur',
+    'author': 'OncoDNA, University of Namur, Noviat',
     'category': 'Accounting & Finance',
     'description': '''
 Module to import CODA bank statements.
@@ -58,10 +59,8 @@ If required, you can manually adjust the descriptions via the CODA configuration
     'data': [
         'views/l10n_be_coda_view.xml',
     ],
+    'conflicts': ['l10n_be_coda'],
     'auto_install': False,
-    'website': 'https://www.odoo.com/page/accounting',
     'installable': True,
     'license': 'AGPL-3',
 }
-
-# vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
